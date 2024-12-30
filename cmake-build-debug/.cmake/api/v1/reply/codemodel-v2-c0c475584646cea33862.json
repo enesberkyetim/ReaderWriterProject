@@ -49,8 +49,8 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "/home/enes-berk/CLionProjects/ReaderWriterProject/cmake-build-debug",
-		"source" : "/home/enes-berk/CLionProjects/ReaderWriterProject"
+		"build" : "/home/melisa/CLionProjects/ReaderWriterProject/cmake-build-debug",
+		"source" : "/home/melisa/CLionProjects/ReaderWriterProject"
 	},
 	"version" : 
 	{
