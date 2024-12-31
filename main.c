@@ -266,6 +266,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+
     // Also counting the last line (in case of there is no \n at the end if there is EOF)
     fseek(file, -1, SEEK_END);
     if (fgetc(file) != '\n') {
