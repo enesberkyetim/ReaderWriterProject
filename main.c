@@ -283,6 +283,7 @@ int main(int argc, char *argv[]) {
         shared_memory[i] = (char *) malloc(256 * sizeof(char));
     }
 
+    // Filling the status arrays with int[3] that will hold the info on : is read ? is uppercased ? is replaced ? is written ?
     for (int i = 0; i < linecount; i++) {
         status_array[i] = (int *) malloc(4 * sizeof(int));
         status_array[i][0] = 0;
@@ -298,10 +299,7 @@ int main(int argc, char *argv[]) {
         pthread_mutex_init(&line_try_lockers[i], NULL);
     }
 
-    // Filling the status arrays with int[3] that will hold the info on : is read ? is uppercased ? is replaced ? is written ?
-    for (int i = 0; i < linecount; i++) {
-        status_array[i] = (int *) malloc(4 * sizeof(int));
-    }
+
 
     /* Part that we create the threads each by each according to given numbers from the user
        Also we are creating pthread_t arrays for each type that will hold the thread id's of the created threads */
@@ -332,6 +330,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < replace_thread_count; i++) {
         struct thread_args *thread_args = malloc(sizeof(struct thread_args));
         thread_args->input_file = input_file_text;
+        thread_args->id = i;
         if (pthread_create(&replace_thread[i], NULL, &replaceThreads, (void *) thread_args) !=0 ) {
             perror("Error creating replace thread\n");
         }
@@ -340,6 +339,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < write_thread_count; i++) {
         struct thread_args *thread_args = malloc(sizeof(struct thread_args));
         thread_args->input_file = input_file_text;
+        thread_args->id = i;
         if (pthread_create(&write_thread[i], NULL, &writeThreads, (void *) thread_args)!= 0) {
             perror("Error creating write thread\n");
         }
