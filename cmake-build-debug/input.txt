@@ -1,7 +1,7 @@
-Gunes dogarken ardindan tepelerin
-Amina koyayim tum teletabilerin
-Lan kirac toprak hic para eder mi ?
-Lafini bilmeyen it bu rapi yer mi
-Kirac bir dunya hic demek, okuz gibi anirip
-Ayi gibi gegirmek
-GOTUNU sikeyim kirac.
+GUNES_DOGARKEN_ARDINDAN_TEPELERIN
+AMINA_KOYAYIM_TUM_TELETABILERIN
+LAN_KIRAC_TOPRAK_HIC_PARA_EDER_MI_?
+LAFINI_BILMEYEN_IT_BU_RAPI_YER_MI
+KIRAC_BIR_DUNYA_HIC_DEMEK,_OKUZ_GIBI_ANIRIP
+AYI_GIBI_GEGIRMEK
+GOTUNU_SIKEYIM_KIRAC.

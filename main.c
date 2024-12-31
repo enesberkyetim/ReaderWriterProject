@@ -21,45 +21,58 @@ int **status_array;
 
 int total_lines;
 
+struct thread_args {
+    char *input_file;
+    int id;
+};
+
 
 // Functions below are the ones that will be run by threads to get their work done
 void *readThreads(void *arg) {
     while (1) {
-        char *file_name = (char *) arg;
+        char *file_name = ((struct thread_args *)arg)->input_file;
+        int id = ((struct thread_args *)arg)->id;
         char line[256];
         int target_line;
         int current_line = 0;
         int counter = 0;
         for (int i = 0; i < total_lines; i++) {
-            pthread_mutex_trylock(&line_try_lockers[i]);
-            if (status_array[i][0] == 0) {
+            int target_line = i;
+            int current_line = 0;
+            if (pthread_mutex_trylock(&line_try_lockers[i]) == 0) {
+                if (status_array[i][0] == 0) {
 
-                target_line = i;
+                    target_line = i;
 
-                FILE *file = fopen(file_name, "r");
+                    FILE *file = fopen(file_name, "r");
 
-                if (file == NULL) {
-                    printf("File could not be opened!\n");
-                    pthread_exit(NULL);
-                }
-
-                while (fgets(line, sizeof(line), file)) {
-                    if (current_line == target_line) {
-                        memcpy(shared_memory[target_line], line, strlen(line));
-                        status_array[i][0] = 1;
-                        break;
+                    if (file == NULL) {
+                        printf("File could not be opened!\n");
+                        pthread_exit(NULL);
                     }
-                    current_line++;
+
+                    while (fgets(line, sizeof(line), file)) {
+                        if (current_line == target_line) {
+                            memcpy(shared_memory[target_line], line, strlen(line));
+                            status_array[i][0] = 1;
+                            break;
+                        }
+                        current_line++;
+                    }
+
+
+                    printf("Read_%d read the line %d which is %s\n", id, i, line);
+
+                    fclose(file);
                 }
-
-                fclose(file);
-
-                break;
+                else if (status_array[i][0] == 1) {
+                    counter++;
+                }
+                pthread_mutex_unlock(&line_try_lockers[i]);
             }
-            else if (status_array[i][0] == 1) {
-                counter++;
+            else {
+                continue;
             }
-            pthread_mutex_unlock(&line_try_lockers[i]);
             // CRITICAL - FINISH ************
         }
         if (counter == total_lines) {
@@ -71,29 +84,41 @@ void *readThreads(void *arg) {
 }
 void *upperThreads(void *arg) {
     while (1){
+        char *file_name = ((struct thread_args *)arg)->input_file;
+        int id = ((struct thread_args *)arg)->id;
 
         char line[256];
         int upper_var;
         int counter = 0;
 
         for (int i = 0; i < total_lines; i++) {
-            pthread_mutex_trylock(&line_try_lockers[i]);
-            if (status_array[i][0] == 1 && status_array[i][1] == 0) {
-                //--------------------critical begins-----------------
-                strcpy(line, shared_memory[i]);
-                for (int j = 0; j < strlen(line); j++) {
-                    upper_var = toupper((unsigned char)line[j]);
-                    line[j] =(unsigned char)(upper_var);
-                }
+            if (pthread_mutex_trylock(&line_try_lockers[i]) == 0) {
+                if (status_array[i][0] == 1 && status_array[i][1] == 0) {
+                    //--------------------critical begins-----------------
+                    strcpy(line, shared_memory[i]);
+                    char * old_line = strdup(line);
+                    for (int j = 0; j < strlen(line); j++) {
+                        upper_var = toupper((unsigned char)line[j]);
+                        line[j] =(unsigned char)(upper_var);
+                    }
 
-                memcpy(shared_memory[i], line, strlen(line));
-                status_array[i][1] = 1;
-                break;
+                    memcpy(shared_memory[i], line, strlen(line));
+                    status_array[i][1] = 1;
+
+                    printf("Upper_%d read the index %d and converted %s to %s\n", id, i, old_line, line);
+
+
+                }
+                else if (status_array[i][0] == 1 && status_array[i][1] == 1) {
+                    counter++;
+
+                }
+                pthread_mutex_unlock(&line_try_lockers[i]);
             }
-            else if (status_array[i][0] == 1 && status_array[i][1] == 1) {
-                counter++;
+            else {
+                continue;
             }
-            pthread_mutex_unlock(&line_try_lockers[i]);
+
         }
 
         if (counter == total_lines) {
@@ -104,30 +129,40 @@ void *upperThreads(void *arg) {
 
 void *replaceThreads(void *arg) {
     while (1){
+        char *file_name = ((struct thread_args *)arg)->input_file;
+        int id = ((struct thread_args *)arg)->id;
 
         char line[256];
 
         int counter =0;
 
         for (int i = 0; i < total_lines; i++) {
-            pthread_mutex_trylock(&line_try_lockers[i]);
-            if (status_array[i][0] == 1 && status_array[i][2] == 0) {
-                //--------------------critical begins-----------------
-                strcpy(line, shared_memory[i]);
-                for (int j = 0; j < strlen(line); j++) {
-                    if (line [j] == ' ') {
-                        line[j] = '_';
+            if (pthread_mutex_trylock(&line_try_lockers[i]) == 0) {
+                if (status_array[i][0] == 1 && status_array[i][2] == 0) {
+                    //--------------------critical begins-----------------
+                    strcpy(line, shared_memory[i]);
+                    char * old_line = strdup(line);
+                    for (int j = 0; j < strlen(line); j++) {
+                        if (line [j] == ' ') {
+                            line[j] = '_';
+                        }
                     }
+                    memcpy(shared_memory[i], line, strlen(line));
+                    status_array[i][2] = 1;
+
+                    printf("Replace_%d read the index %d and converted %s to %s\n", id, i, old_line, line);
+
                 }
-                memcpy(shared_memory[i], line, strlen(line));
-                status_array[i][2] = 1;
-                break;
+                else if (status_array[i][0] == 1 && status_array[i][2] == 1) {
+                    counter++;
+
+                }
+                pthread_mutex_unlock(&line_try_lockers[i]);
+            }
+            else {
+                continue;
             }
 
-            else if (status_array[i][0] == 1 && status_array[i][2] == 1) {
-                counter++;
-            }
-            pthread_mutex_unlock(&line_try_lockers[i]);
         }
 
         if (counter == total_lines) {
@@ -141,18 +176,20 @@ void *writeThreads(void *arg) {
     while (1) {
         FILE *file;
         FILE *temp_file;
-        char *file_name = (char *) arg;
+        char *file_name = ((struct thread_args *)arg)->input_file;
+        int id = ((struct thread_args *)arg)->id;
         char line[256];
-        int target_line;
-        int current_line = 0;
         int counter = 0;
 
         for (int i = 0; i < total_lines; i++) {
             sem_wait(&writer_sem);
             if (status_array[i][0] == 1 && status_array[i][1] == 1 && status_array[i][2] == 1 && status_array[i][3] == 0) {
-                target_line = i;
 
-                file = fopen((char *) arg, "r");
+                int target_line = i;
+                int current_line = 0;
+
+
+                file = fopen(file_name, "r");
                 if (file == NULL) {
                     perror("File could not be opened!\n");
                     pthread_exit(NULL);
@@ -175,11 +212,18 @@ void *writeThreads(void *arg) {
                     }
                     current_line++;
                 }
+
+
                 fclose(file);
                 fclose(temp_file);
 
-                remove((char *) arg);
-                rename("temp.txt", (char *) arg);
+                remove(file_name);
+                rename("temp.txt", file_name);
+
+                printf("Write_%d write line %d back which is %s\n", id, i, shared_memory[target_line]);
+
+
+
             }
             else if (status_array[i][0] == 1 && status_array[i][1] == 1 && status_array[i][2] == 1 && status_array[i][3] == 1) {
                 counter++;
@@ -250,7 +294,7 @@ int main(int argc, char *argv[]) {
     line_try_lockers = (pthread_mutex_t *) malloc(linecount * sizeof(pthread_mutex_t));
     sem_init(&writer_sem, 0, 1);
 
-    for (int i = 0; i < sizeof(status_array) / (4 * sizeof(int)); i++) {
+    for (int i = 0; i < linecount; i++) {
         pthread_mutex_init(&line_try_lockers[i], NULL);
     }
 
@@ -261,29 +305,42 @@ int main(int argc, char *argv[]) {
 
     /* Part that we create the threads each by each according to given numbers from the user
        Also we are creating pthread_t arrays for each type that will hold the thread id's of the created threads */
+
+
+
     pthread_t read_thread[read_thread_count];
     for (int i = 0; i < read_thread_count; i++) {
-        if (pthread_create(&read_thread[i], NULL, &readThreads, (void *) input_file_text) != 0) {
+        struct thread_args *thread_args = malloc(sizeof(struct thread_args));
+        thread_args->input_file = input_file_text;
+        thread_args->id = i;
+        if (pthread_create(&read_thread[i], NULL, &readThreads, (void *) thread_args) != 0) {
             printf("Error creating read thread\n");
         }
     }
 
     pthread_t upper_thread[upper_thread_count];
     for (int i = 0; i < upper_thread_count; i++) {
-        if (pthread_create(&upper_thread[i], NULL, &upperThreads, (void *) input_file_text) != 0) {
+        struct thread_args *thread_args = malloc(sizeof(struct thread_args));
+        thread_args->input_file = input_file_text;
+        thread_args->id = i;
+        if (pthread_create(&upper_thread[i], NULL, &upperThreads, (void *) thread_args) != 0) {
             perror("Error creating upper thread\n");
         }
     }
 
     pthread_t replace_thread[replace_thread_count];
     for (int i = 0; i < replace_thread_count; i++) {
-        if (pthread_create(&replace_thread[i], NULL, &replaceThreads, (void *) input_file_text) !=0 ) {
+        struct thread_args *thread_args = malloc(sizeof(struct thread_args));
+        thread_args->input_file = input_file_text;
+        if (pthread_create(&replace_thread[i], NULL, &replaceThreads, (void *) thread_args) !=0 ) {
             perror("Error creating replace thread\n");
         }
     }
     pthread_t write_thread[write_thread_count];
     for (int i = 0; i < write_thread_count; i++) {
-        if (pthread_create(&write_thread[i], NULL, &writeThreads, (void *) input_file_text)!= 0) {
+        struct thread_args *thread_args = malloc(sizeof(struct thread_args));
+        thread_args->input_file = input_file_text;
+        if (pthread_create(&write_thread[i], NULL, &writeThreads, (void *) thread_args)!= 0) {
             perror("Error creating write thread\n");
         }
     }
