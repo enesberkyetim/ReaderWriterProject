@@ -230,7 +230,6 @@ void *writeThreads(void *arg) {
             }
             sem_post(&writer_sem);
         }
-
         if (counter == total_lines) {
             pthread_exit(NULL);
         }
